@@ -1,97 +1,160 @@
-/**
- * Data Catalog Project Starter Code - SEA Stage 2
- *
- * This file is where you should be doing most of your work. You should
- * also make changes to the HTML and CSS files, but we want you to prioritize
- * demonstrating your understanding of data structures, and you'll do that
- * with the JavaScript code you write in this file.
- *
- * The comments in this file are only to help you learn how the starter code
- * works. The instructions for the project are in the README. That said, here
- * are the three things you should do first to learn about the starter code:
- * - 1 - Change something small in index.html or style.css, then reload your
- *    browser and make sure you can see that change.
- * - 2 - On your browser, right click anywhere on the page and select
- *    "Inspect" to open the browser developer tools. Then, go to the "console"
- *    tab in the new window that opened up. This console is where you will see
- *    JavaScript errors and logs, which is extremely helpful for debugging.
- *    (These instructions assume you're using Chrome, opening developer tools
- *    may be different on other browsers. We suggest using Chrome.)
- * - 3 - Add another string to the titles array a few lines down. Reload your
- *    browser and observe what happens. You should see a fourth "card" appear
- *    with the string you added to the array, but a broken image.
- *
- */
+import catalog from "./catalog.js";
 
-const FRESH_PRINCE_URL =
-  "https://upload.wikimedia.org/wikipedia/en/3/33/Fresh_Prince_S1_DVD.jpg";
-const CURB_POSTER_URL =
-  "https://m.media-amazon.com/images/M/MV5BZDY1ZGM4OGItMWMyNS00MDAyLWE2Y2MtZTFhMTU0MGI5ZDFlXkEyXkFqcGdeQXVyMDc5ODIzMw@@._V1_FMjpg_UX1000_.jpg";
-const EAST_LOS_HIGH_POSTER_URL =
-  "https://static.wikia.nocookie.net/hulu/images/6/64/East_Los_High.jpg";
+const cardContainer = document.getElementById("card-container");
+const templateCard = document.querySelector(".card");
 
-// This is an array of strings (TV show titles)
-let titles = [
-  "Fresh Prince of Bel Air",
-  "Curb Your Enthusiasm",
-  "East Los High",
-];
-// Your final submission should have much more data than this, and
-// you should use more than just an array of strings to store it all.
+let partySize = parseInt(document.getElementById("party-size").value, 10);
+let showFavoritesOnly = false;
 
-// This function adds cards the page to display the data in the array
+document.addEventListener("DOMContentLoaded", () => {
+  //this is a listener that checks when my party-size is modified or when the "Shant's Favorites!" button is pressed
+  const partySizeInput = document.getElementById("party-size");
+  partySizeInput.addEventListener("change", refreshCards);
+
+  const favoritesButton = document.getElementById("favorites-button");
+  favoritesButton.addEventListener("click", toggleFavorites);
+
+  refreshCards();
+});
+
+document.getElementById("teehee-button").onclick = function () {
+  location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+};
+
 function showCards() {
-  const cardContainer = document.getElementById("card-container");
-  cardContainer.innerHTML = "";
-  const templateCard = document.querySelector(".card");
+  //this functions contains most of the functionality for displaying the cards
+  //it is based off of the show cards function initially included with modifications
+  //it pulls all data from a const contained int catalog.js which stores all the data that the page uses
 
-  for (let i = 0; i < titles.length; i++) {
-    let title = titles[i];
 
-    // This part of the code doesn't scale very well! After you add your
-    // own data, you'll need to do something totally different here.
-    let imageURL = "";
-    if (i == 0) {
-      imageURL = FRESH_PRINCE_URL;
-    } else if (i == 1) {
-      imageURL = CURB_POSTER_URL;
-    } else if (i == 2) {
-      imageURL = EAST_LOS_HIGH_POSTER_URL;
+  //scale factor is div 2 as the original party size is 2 people so whenever it is changed this number is modified then multiplied
+  //by the ingredients to update the number and display a correct amount for the according party size
+  const scaleFactor = partySize/2
+
+  const recipesToShow = showFavoritesOnly ? catalog.filter((catalog)=> catalog.favorite) : catalog;
+
+
+  //this for loop iterates through the 16 different recipies/dishes
+  for (let i = 0; i < recipesToShow.length; i++) {
+    const recipe = recipesToShow[i];
+    let title = recipe.title;
+    let image = recipe.image;
+    
+    //this loop handles pulling and ordering the ingredients into a list and uses f-strings to handle each row
+    const ingredientsList = document.createElement('ul');
+    for(let j=0; j < recipe.ingredients.length; j++){
+      let ingredients  = recipe.ingredients[j];
+      const li = document.createElement('li');
+      li.textContent = `${ingredients.amount * scaleFactor} ${ingredients.unit} ${ingredients.item}`;
+      ingredientsList.appendChild(li);
+    }
+
+    //this loop handles pulling and ordering the macros into a list and uses f-strings to handle each row
+    const macrosList = document.createElement('ul');
+    for(let j=0; j < recipe.macros.length; j++){ 
+      let macros = recipe.macros[j];
+      const li = document.createElement('li');
+      li.textContent = `${macros.macro} ${macros.value * scaleFactor} ${macros.unit}` 
+      macrosList.appendChild(li);
+    }
+
+    //this loop handles pulling all of the directions/instructions for each recipe and orders with an end-line/break
+    const directionsParagraph = document.createElement('p');
+    for (let j=0; j < recipe.directions.length; j++){ 
+      let directions = recipe.directions[j];
+      const textNode = document.createTextNode(directions)
+      directionsParagraph.appendChild(textNode)
+
+      directionsParagraph.innerHTML = recipe.directions.join('</br>')
     }
 
     const nextCard = templateCard.cloneNode(true); // Copy the template card
-    editCardContent(nextCard, title, imageURL); // Edit title and image
+    nextCard.style.display = "flex";
+
+    nextCard.addEventListener("click", () => toggleDirections(nextCard));
+
+    editCardContent(nextCard, title, image); // Edit title and image
+    const bulletContainer = nextCard.querySelector(".card-content-text .dynamic-bullets");
+    if (bulletContainer) {
+      bulletContainer.innerHTML = ""; // Clear any existing content
+    
+      // Create and append the "Ingredients:" heading.
+      const ingredientsHeader = document.createElement("h4");
+      ingredientsHeader.textContent = "Ingredients:";
+      bulletContainer.appendChild(ingredientsHeader);
+    
+      bulletContainer.appendChild(ingredientsList);
+    
+      // Create and append the "Macros:" heading.
+      const macrosHeader = document.createElement("h4");
+      macrosHeader.textContent = "Macros:";
+      bulletContainer.appendChild(macrosHeader);
+    
+      bulletContainer.appendChild(macrosList);
+    }
+    
+    //appends the data to their selective classes to appear correctly in the html
+    const paragraphContainer = nextCard.querySelector(".card-content-text .directions-text");
+    const directionsHeader = document.createElement("h4");
+    directionsHeader.textContent = "Instructions:";
+    paragraphContainer.appendChild(directionsHeader);
+    paragraphContainer.appendChild(directionsParagraph);
+
+
+    // Append the fully updated card to the card container.
     cardContainer.appendChild(nextCard); // Add new card to the container
   }
 }
 
 function editCardContent(card, newTitle, newImageURL) {
-  card.style.display = "block";
+  //this function is called when a new card is being generated, which updates its name and picture
 
-  const cardHeader = card.querySelector("h2");
-  cardHeader.textContent = newTitle;
+  // Update the title.
+  const cardHeader = card.querySelector(".card h2");
+  if (cardHeader) {
+    cardHeader.textContent = newTitle;
+  } else {
+    console.warn("Card header not found.");
+  }
 
-  const cardImage = card.querySelector("img");
-  cardImage.src = newImageURL;
-  cardImage.alt = newTitle + " Poster";
+  // Update the image.
+  const cardImage = card.querySelector(".card-content-images img");
+  if (cardImage) {
+    cardImage.src = newImageURL;
+    cardImage.alt = `${newTitle} Poster`;
+  } else {
+    console.log("Card image not found.");
+  }
 
-  // You can use console.log to help you debug!
-  // View the output by right clicking on your website,
-  // select "Inspect", then click on the "Console" tab
-  console.log("new card:", newTitle, "- html: ", card);
+  console.log("New card created:", newTitle);
 }
 
-// This calls the addCards() function when the page is first loaded
-document.addEventListener("DOMContentLoaded", showCards);
-
-function quoteAlert() {
-  console.log("Button Clicked!");
-  alert(
-    "I guess I can kiss heaven goodbye, because it got to be a sin to look this good!"
-  );
+function toggleDirections(card) {
+  //when the user clicks on a card it extends and shows the instructions to make the food
+  const directions = card.querySelector(".directions-text");
+  directions.classList.toggle("hidden");
 }
 
-function removeLastCard() {
-  titles.pop(); // Remove last item in titles array
-  showCards(); // Call showCards again to refresh
+function refreshCards() {
+  //this is a helper function that refreshes the displayed cards when the party size is changed or favorites button is triggered
+
+  // Read the latest party size input
+  const partySizeInput = document.getElementById("party-size");
+  partySize = parseInt(partySizeInput.value, 10);
+
+  // Clear the current cards
+  cardContainer.innerHTML = "";
+
+  // Render updated set based on filters (e.g. Shant's favorites)
+  showCards();
+}
+
+function toggleFavorites() {
+  //Function to display 8 of my favorite dishes
+  showFavoritesOnly = !showFavoritesOnly;
+
+  const button = document.getElementById("favorites-button");
+  button.textContent = showFavoritesOnly ? "Show All Dishes" : "Shant's Favorites!";
+
+  refreshCards();
 }
